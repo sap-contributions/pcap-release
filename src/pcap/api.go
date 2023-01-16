@@ -300,10 +300,15 @@ func validateApiBoshRequest(req *BoshRequest) error {
 	return nil
 }
 
+// boshRequestReceiver is an interface used by stopCmd to simplify testing.
+type boshRequestReceiver interface {
+	Recv() (*BoshRequest, error)
+}
+
 // stopCmd reads the next message from the stream. It ensures that the message
 // has a payload of StopBoshCapture. If any error is encountered or the payload is
 // of a different type an appropriate cause is set and the cancel function is called.
-func stopCmd(cancel CancelCauseFunc, stream API_CaptureBoshServer) {
+func stopCmd(cancel CancelCauseFunc, stream boshRequestReceiver) {
 	go func() {
 		msg, err := stream.Recv()
 		if err != nil {

@@ -3,6 +3,8 @@ package pcap
 import (
 	"context"
 	"errors"
+	"google.golang.org/grpc/codes"
+	"io"
 	"testing"
 )
 
@@ -93,25 +95,25 @@ func (m *mockCaptureStream) Recv() (*CaptureResponse, error) {
 func (m *mockCaptureStream) Send(*AgentRequest) error {
 	return nil
 }
-func Test_readMsg(t *testing.T) {
+func TestReadMsg(t *testing.T) {
 	tests := []struct {
 		name          string
 		captureStream captureReceiver
 		target        string
 		expectedData  MessageType
 	}{
-		/*{
+		{
 			name:          "EOF during capture",
 			captureStream: &mockCaptureStream{nil, io.EOF},
 			target:        "172.20.0.2",
 			expectedData:  MessageType_CAPTURE_STOPPED,
-		}
+		},
 		{
 			name:          "Unexpected error from capture stream",
 			captureStream: &mockCaptureStream{nil, errorf(codes.Unknown, "unexpected error")},
 			target:        "172.20.0.2",
 			expectedData:  MessageType_CONNECTION_ERROR,
-		},*/
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -119,7 +121,10 @@ func Test_readMsg(t *testing.T) {
 			ctx := context.Background()
 			readMsg(ctx, tt.captureStream, tt.target, out)
 
+			close(out) // close out channel in order to iterate over it
+
 			var got MessageType
+
 			for s := range out {
 				got = s.GetPayload().(*CaptureResponse_Message).Message.GetType()
 			}
@@ -171,6 +176,72 @@ func TestCheckAgentStatus(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("checkAgentStatus() error = %v, wantErr %v", err, tt.wantErr)
 				return
+			}
+		})
+	}
+}
+
+type mockBoshRequestReceiver struct {
+	req *BoshRequest
+	err error
+}
+
+func (m *mockBoshRequestReceiver) Recv() (*BoshRequest, error) {
+	return m.req, m.err
+}
+func TestStopCmd(t *testing.T) {
+	tests := []struct {
+		name        string
+		recv        boshRequestReceiver
+		expectedErr error
+		wantErr     bool
+	}{
+		{
+			name:        "EOF during reading of message",
+			recv:        &mockBoshRequestReceiver{req: nil, err: io.EOF},
+			expectedErr: io.EOF,
+			wantErr:     true,
+		},
+		{
+			name:        "Empty payload",
+			recv:        &mockBoshRequestReceiver{req: &BoshRequest{}, err: nil},
+			expectedErr: errNilField,
+			wantErr:     true,
+		},
+		{
+			name:        "Empty message",
+			recv:        &mockBoshRequestReceiver{req: nil, err: nil},
+			expectedErr: errNilField,
+			wantErr:     true,
+		},
+		{
+			name:        "Invalid payload type",
+			recv:        &mockBoshRequestReceiver{req: &BoshRequest{Payload: &BoshRequest_Start{}}, err: nil},
+			expectedErr: errInvalidPayload,
+			wantErr:     true,
+		},
+		{
+			name:        "Happy path",
+			recv:        &mockBoshRequestReceiver{req: &BoshRequest{Payload: &BoshRequest_Stop{}}, err: nil},
+			expectedErr: context.Canceled,
+			wantErr:     true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			ctx, cancel := WithCancelCause(ctx)
+			stopCmd(cancel, test.recv)
+			<-ctx.Done()
+
+			err := Cause(ctx)
+
+			if (err != nil) != test.wantErr {
+				t.Errorf("wantErr = %v, error = %v", test.wantErr, err)
+			}
+
+			if test.expectedErr != nil && !errors.Is(err, test.expectedErr) {
+				t.Errorf("expectedErr = %v, error = %v", test.expectedErr, err)
 			}
 		})
 	}
