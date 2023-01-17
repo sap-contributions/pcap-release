@@ -81,25 +81,26 @@ func (api *Api) CaptureBosh(stream API_CaptureBoshServer) (err error) {
 
 	opts := req.Payload.(*BoshRequest_Start).Start.Capture
 
-	var resChannels []<-chan *CaptureResponse
+	var captureCs []<-chan *CaptureResponse
 
 	captureWG := &sync.WaitGroup{}
 
 	for _, target := range targets {
 		log := api.log.With(zap.String("target", target))
 		log.Info("starting capture")
+
 		captureWG.Add(1)
-		channel := startCapture(ctx, opts, target, captureWG)
+
 		// TODO how to get whether all captures end with errors or cannot be started at all
-		resChannels = append(resChannels, channel)
+		captureCs = append(captureCs, startCapture(ctx, opts, target, captureWG))
 	}
 
-	client := mergeResponseChannels(resChannels)
+	out := mergeResponseChannels(captureCs)
 
 	// merge channels to one channel and send to forward to stream
 	forwardWG := &sync.WaitGroup{}
 	forwardWG.Add(1)
-	forwardToStream(cancel, client, stream, api.bufConf, forwardWG)
+	forwardToStream(cancel, out, stream, api.bufConf, forwardWG)
 
 	stopCmd(cancel, stream)
 
@@ -109,8 +110,11 @@ func (api *Api) CaptureBosh(stream API_CaptureBoshServer) (err error) {
 	if err != nil {
 		return err
 	}
+
 	captureWG.Wait()
+
 	forwardWG.Wait()
+
 	return nil
 }
 

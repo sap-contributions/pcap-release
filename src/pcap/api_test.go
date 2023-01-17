@@ -97,28 +97,42 @@ func (m *mockCaptureStream) Send(*AgentRequest) error {
 }
 func TestReadMsg(t *testing.T) {
 	tests := []struct {
-		name          string
-		captureStream captureReceiver
-		target        string
-		expectedData  MessageType
+		name             string
+		captureStream    captureReceiver
+		target           string
+		contextCancelled bool
+		expectedData     MessageType
 	}{
 		{
-			name:          "EOF during capture",
-			captureStream: &mockCaptureStream{nil, io.EOF},
-			target:        "172.20.0.2",
-			expectedData:  MessageType_CAPTURE_STOPPED,
+			name:             "EOF during capture",
+			captureStream:    &mockCaptureStream{nil, io.EOF},
+			target:           "172.20.0.2",
+			contextCancelled: false,
+			expectedData:     MessageType_CAPTURE_STOPPED,
 		},
 		{
-			name:          "Unexpected error from capture stream",
-			captureStream: &mockCaptureStream{nil, errorf(codes.Unknown, "unexpected error")},
-			target:        "172.20.0.2",
-			expectedData:  MessageType_CONNECTION_ERROR,
+			name:             "Unexpected error from capture stream",
+			captureStream:    &mockCaptureStream{nil, errorf(codes.Unknown, "unexpected error")},
+			target:           "172.20.0.2",
+			contextCancelled: false,
+			expectedData:     MessageType_CONNECTION_ERROR,
+		},
+		{
+			name:             "Capture stop request from client and capture stopped with EOF",
+			captureStream:    &mockCaptureStream{nil, io.EOF},
+			target:           "172.20.0.2",
+			contextCancelled: true,
+			expectedData:     MessageType_CAPTURE_STOPPED,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			out := make(chan *CaptureResponse, 1)
 			ctx := context.Background()
+			ctx, cancel := WithCancelCause(ctx)
+			if tt.contextCancelled {
+				cancel(nil)
+			}
 			readMsg(ctx, tt.captureStream, tt.target, out)
 
 			close(out) // close out channel in order to iterate over it
@@ -141,7 +155,6 @@ func TestCheckAgentStatus(t *testing.T) {
 		name      string
 		statusRes *StatusResponse
 		err       error
-		want      *CaptureResponse
 		wantErr   bool
 	}{
 
