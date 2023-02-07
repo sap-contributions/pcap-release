@@ -11,21 +11,24 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/cloudfoundry/pcap-release/src/pcap"
-	gopcap "github.com/google/gopacket/pcap"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/status"
 	"io"
 	"math/big"
 	"net"
 	"os"
 	"path"
 	"time"
+
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
+
+	gopcap "github.com/google/gopacket/pcap"
+
+	"github.com/cloudfoundry/pcap-release/src/pcap"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 )
 
 var lis net.Listener
@@ -84,8 +87,7 @@ var _ = Describe("IntegrationTests", func() {
 			targets = append(targets, target)
 
 			agentTLSConf := pcap.AgentTLSConf{AgentTLSSkipVerify: true}
-			apiConf := pcap.APIConf{Targets: targets}
-			apiClient, apiServer = createAPI(8080, apiConf, agentTLSConf)
+			apiClient, apiServer = createAPI(8080, targets, nil, agentTLSConf)
 
 			stop = &pcap.CaptureRequest{
 				Operation: &pcap.CaptureRequest_Stop{},
@@ -100,6 +102,7 @@ var _ = Describe("IntegrationTests", func() {
 				SnapLen: 65000,
 			}
 		})
+
 		AfterEach(func() {
 			agentServer1.GracefulStop()
 			agentServer2.GracefulStop()
@@ -319,9 +322,9 @@ var _ = Describe("IntegrationTests", func() {
 			targets = append(targets, target)
 
 			agentTLSConf := pcap.AgentTLSConf{AgentTLSSkipVerify: false, AgentCommonName: agentServerCertCN, AgentCA: caPath}
-			apiConf := pcap.APIConf{Targets: targets, ClientCertFile: clientCertFile, ClientPrivateKeyFile: clientKeyFile}
+			clientCert := &pcap.ClientCert{ClientCertFile: clientCertFile, ClientPrivateKeyFile: clientKeyFile}
 
-			apiClient, apiServer = createAPI(8080, apiConf, agentTLSConf)
+			apiClient, apiServer = createAPI(8080, targets, clientCert, agentTLSConf)
 
 			stop = &pcap.CaptureRequest{
 				Operation: &pcap.CaptureRequest_Stop{},
@@ -503,16 +506,15 @@ func configureServer(certFile string, keyFile string, clientCAFile string) (cred
 
 func createAgent(port int, tlsCreds credentials.TransportCredentials) (pcap.AgentClient, *grpc.Server, pcap.AgentEndpoint) {
 	var server *grpc.Server
-	agent, err := pcap.NewAgent(nil, pcap.BufferConf{100, 98, 90})
-	Expect(err).NotTo(HaveOccurred())
+	agent := pcap.NewAgent(pcap.BufferConf{100, 98, 80})
 
-	lis, err = net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
+	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	Expect(err).NotTo(HaveOccurred())
 	tcpAddr, ok := lis.Addr().(*net.TCPAddr)
 	Expect(ok).To(BeTrue())
 	fmt.Printf("create agent with listener  %s\n", lis.Addr().String())
 
-	target := pcap.AgentEndpoint{Ip: tcpAddr.IP.String(), Port: tcpAddr.Port}
+	target := pcap.AgentEndpoint{IP: tcpAddr.IP.String(), Port: tcpAddr.Port}
 	server = grpc.NewServer()
 	if tlsCreds != nil {
 		server = grpc.NewServer(grpc.Creds(tlsCreds))
@@ -533,12 +535,12 @@ func createAgent(port int, tlsCreds credentials.TransportCredentials) (pcap.Agen
 	return agentClient, server, target
 }
 
-func createAPI(port int, apiConf pcap.APIConf, agentTLSConf pcap.AgentTLSConf) (pcap.APIClient, *grpc.Server) {
+func createAPI(port int, targets []pcap.AgentEndpoint, mTLSConfig *pcap.ClientCert, agentTLSConf pcap.AgentTLSConf) (pcap.APIClient, *grpc.Server) {
 	var server *grpc.Server
+	api := pcap.NewAPI(pcap.BufferConf{Size: 100, UpperLimit: 98, LowerLimit: 80}, mTLSConfig, agentTLSConf)
+	api.RegisterHandler(&pcap.BoshHandler{Config: pcap.ManualEndpoints{Targets: targets}})
 
-	api, err := pcap.NewAPI(nil, pcap.BufferConf{100, 98, 90}, apiConf, agentTLSConf)
-	Expect(err).NotTo(HaveOccurred())
-
+	var err error
 	lis, err = net.Listen("tcp", fmt.Sprintf(":%d", port))
 	Expect(err).NotTo(HaveOccurred())
 
