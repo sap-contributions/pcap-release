@@ -39,15 +39,30 @@ instance_groups:
         release: pcap
         properties:
           pcap-api:
-            agent_tls_skip_verify: true
-            enable_server_tls: false
-            cf_api: ((pcap_api.cf_api))
-            bosh_director_api: ((pcap_api.bosh_director_api))
-            bosh_director_ca: ((pcap_api.bosh_director_ca))
-            client_cert: ((pcap_api_mtls.certificate))
-            client_key: ((pcap_api_mtls.private_key))
-            agent_ca: ((pcap_api_mtls.ca))
-            agent_common_name: pcap-agent.service.cf.internal
+            log_level: info
+            buffer:
+              size: 1000
+              upper_limit: 995
+              lower_limit: 900
+            concurrent_captures: 5
+            listen:
+              port: 8080
+              tls:
+                certificate: ((pcap_api_mtls.certificate))
+                private_key: ((pcap_api_mtls.private_key))
+                ca: ((pcap_ca.ca))
+            bosh:
+              director_url: ((pcap_api.bosh_director_api))
+              token_scope: bosh.admin
+              agent_port: 9494
+              mtls:
+                common_name: bosh.service.cf.internal
+                skip_verify: true
+                certificate: ((pcap_api_bosh_mtls.certificate))
+                private_key: ((pcap_api_bosh_mtls.certificate))
+                ca: ((/bootstrap-bosh-aws-cfn07/bosh/default_ca.ca))
+            agents_mtls:
+              enabled: false
       - name: route_registrar
         release: routing
         consumes:
@@ -87,9 +102,7 @@ releases:
     url: https://bosh.io/d/github.com/cloudfoundry/bpm-release?v=1.1.8
     sha1: c956394fce7e74f741e4ae8c256b480904ad5942
   - name: pcap
-    version: 0+dev.7
-    url: https://github.com/domdom82/pcap-server-release/releases/download/v0.0.1/pcap-server-0.0.1.tgz
-    sha1: a1655c1992b911fef3ad0b46c5abb8a0217ef0a2
+    version: 0+dev.30
   - name: bosh-dns-aliases
     version: 0.0.4
     url: https://bosh.io/d/github.com/cloudfoundry/bosh-dns-aliases-release?v=0.0.4
@@ -102,7 +115,6 @@ releases:
 variables:
   - name: pcap_api_mtls
     type: certificate
-    update_mode: converge
     options:
       ca: ((pcap_api.ca_path))
       common_name: pcap_api_mtls
@@ -111,3 +123,12 @@ variables:
       extended_key_usage:
         - client_auth
         - server_auth
+  - name: pcap_api_bosh_mtls
+    type: certificate
+    options:
+      ca: ((pcap_api.bosh_director_ca))
+      common_name: pcap_api_bosh_mtls
+      alternative_names:
+        - pcap-api.service.cf.internal
+      extended_key_usage:
+        - client_auth

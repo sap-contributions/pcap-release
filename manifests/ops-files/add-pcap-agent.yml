@@ -3,9 +3,7 @@
   path: /releases/name=pcap?
   value:
     name: pcap
-    version: 0+dev.7
-    url: https://github.com/cloudfoundry/pcap-release/releases/download/v0.0.1/pcap-0.0.1.tgz
-    sha1: a1655c1992b911fef3ad0b46c5abb8a0217ef0a2
+    version: 0+dev.30
 
 - type: replace
   path: /variables/name=pcap_ca?
@@ -38,6 +36,15 @@
     release: pcap
     properties:
       pcap-agent:
-        cert: ((pcap_agent_mtls.certificate))
-        key: ((pcap_agent_mtls.private_key))
-        ca_cert: ((pcap_agent_mtls.ca))
+        id: pcap-agent/123
+        log_level: info
+        buffer:
+          size: 100
+          upper_limit: 95
+          lower_limit: 90
+        listen:
+          port: 9494
+          tls:
+            certificate: ((pcap_agent_mtls.certificate))
+            private_key: ((pcap_agent_mtls.private_key))
+            ca: ((pcap_agent_mtls.ca))
