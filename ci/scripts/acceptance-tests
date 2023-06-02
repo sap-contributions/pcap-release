@@ -36,8 +36,6 @@ bosh -n upload-release --sha1 386293038ae3d00813eaa475b4acf63f8da226ef \
 export BOSH_PATH=$(which bosh)
 export BASE_MANIFEST_PATH="$PWD/manifests/pcap-api-acceptance-tests.yml"
 
-#cd "src"
-#cd "pcap"
 #cd "acceptance-tests"
 
 #echo "----- Installing dependencies"
