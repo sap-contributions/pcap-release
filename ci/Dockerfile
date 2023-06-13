@@ -14,7 +14,8 @@ RUN echo "source /tmp/local-bosh/director/env" >> /root/.bashrc
 RUN npm install -g semantic-release && \
     npm install -g @semantic-release/exec
 
-
+# Install go dependencies
+ENV GOBIN=/usr/local/bin
 RUN go install "github.com/onsi/ginkgo/v2/ginkgo@${GINKGO_VERSION}" \
  && go install "github.com/golangci/golangci-lint/cmd/golangci-lint@${GOLANGCILINT_VERSION}" \
  && go install "github.com/geofffranks/spruce/cmd/spruce@latest"
