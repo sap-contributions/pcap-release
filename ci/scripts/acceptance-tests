@@ -4,7 +4,17 @@ set -e
 
 stemcell_jammy_path=$PWD/stemcell/*.tgz
 
+if [ -n "$FOCUS" ]; then
+  echo "------------------------------------------------------------------"
+  echo "FOCUS is set. Will only run tests matching '$FOCUS'"
+  echo "Docker won't be stopped afterwards, so you can debug the test."
+  echo "------------------------------------------------------------------"
+  ADDITIONAL_ARGS=("--focus" "$FOCUS")
+fi
+
 cd ${REPO_ROOT:?required}
+echo "----- Pulling in any git submodules..."
+git submodule update --init --recursive --force
 
 echo "----- Starting BOSH"
 
@@ -14,6 +24,10 @@ function stop_docker() {
   echo "----- stopping docker"
   service docker stop
 }
+
+if [ -z "$FOCUS" ]; then
+  trap stop_docker EXIT
+fi
 
 source /tmp/local-bosh/director/env
 
@@ -36,15 +50,13 @@ bosh -n upload-release --sha1 386293038ae3d00813eaa475b4acf63f8da226ef \
 export BOSH_PATH=$(which bosh)
 export BASE_MANIFEST_PATH="$PWD/manifests/pcap-api-acceptance-tests.yml"
 
-#cd "acceptance-tests"
+cd "acceptance-tests"
 
-#echo "----- Installing dependencies"
-#go mod download
+echo "----- Installing dependencies"
+go mod download
 
-#echo "----- Running tests"
+echo "----- Running tests"
 
-#export PATH=$PATH:$GOPATH/bin
-#ginkgo version
-#ginkgo -v -p -r --trace --show-node-events --randomize-all --flake-attempts 5
-
-stop_docker
+export PATH=$PATH:$GOPATH/bin
+ginkgo version
+ginkgo -v -p -r --trace --show-node-events --randomize-all --flake-attempts 5 "${ADDITIONAL_ARGS[@]}"
