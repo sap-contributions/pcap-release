@@ -213,6 +213,7 @@ function main() {
       export BOSH_CLIENT=admin
       export BOSH_CLIENT_SECRET=`bosh int "${local_bosh_dir}/creds.yml" --path /admin_password`
       export BOSH_CA_CERT="${local_bosh_dir}/ca.crt"
+      export BOSH_DIRECTOR_IP="${BOSH_DIRECTOR_IP}"
 
 EOF
       source "${local_bosh_dir}/env"

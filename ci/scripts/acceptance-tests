@@ -18,17 +18,7 @@ git submodule update --init --recursive --force
 
 echo "----- Starting BOSH"
 
-echo "ENVIRONMENT BEGIN"
-env
-echo "ENVIRONMENT END"
-
-
 ./ci/scripts/start-bosh.sh
-
-echo "ENVIRONMENT BEGIN"
-env
-echo "ENVIRONMENT END"
-
 
 function stop_docker() {
   echo "----- stopping docker"
@@ -38,9 +28,6 @@ function stop_docker() {
 if [ -z "$FOCUS" ]; then
   trap stop_docker EXIT
 fi
-
-echo "/tmp/local-bosh/director/env"
-cat /tmp/local-bosh/director/env
 
 source /tmp/local-bosh/director/env
 
