@@ -3,11 +3,9 @@ package acceptance_tests
 import (
 	"encoding/json"
 	"fmt"
-	"testing"
-	"time"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"testing"
 )
 
 func TestAcceptanceTests(t *testing.T) {
@@ -24,8 +22,6 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 
 	listDeployments()
 
-	time.Sleep(2 * time.Hour)
-	
 	// Deploy pcap-api deployment
 	deployPcap(baseManifestVars{
 		deploymentName: deploymentNameForTestNode(),

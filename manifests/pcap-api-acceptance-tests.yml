@@ -110,7 +110,7 @@ variables:
     options:
       alternative_names:
         - pcap-api.service.cf.internal
-      ca: /bootstrap/bosh/default_ca
+      ca: default_ca
       common_name: pcap_api_bosh_mtls
       extended_key_usage:
         - client_auth
