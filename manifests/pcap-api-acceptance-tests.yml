@@ -110,7 +110,7 @@ variables:
     options:
       alternative_names:
         - pcap-api.service.cf.internal
-      ca: /bosh/default_ca
+      ca: /docker/default_ca
       common_name: pcap_api_bosh_mtls
       extended_key_usage:
         - client_auth
