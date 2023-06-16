@@ -52,6 +52,45 @@ func deployPcap(baseManifestVars baseManifestVars, customVars map[string]interfa
 	}
 }
 
+type boshInstance struct {
+	AgentID           string `json:"agent_id"`
+	Az                string `json:"az"`
+	Bootstrap         string `json:"bootstrap"`
+	Deployment        string `json:"deployment"`
+	DiskCids          string `json:"disk_cids"`
+	Ignore            string `json:"ignore"`
+	Index             string `json:"index"`
+	Instance          string `json:"instance"`
+	CommaSeparatedIPs string `json:"ips"`
+	ProcessState      string `json:"process_state"`
+	State             string `json:"state"`
+	VMCid             string `json:"vm_cid"`
+	VMType            string `json:"vm_type"`
+}
+
+func (instance boshInstance) ParseIPs() []string {
+	return strings.Split(instance.CommaSeparatedIPs, ",")
+}
+
+func boshInstances(boshDeployment string) []boshInstance {
+	writeLog("Fetching Bosh instances")
+	cmd := config.boshCmd(boshDeployment, "--json", "instances", "--details")
+	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+	Eventually(session, time.Minute, time.Second).Should(gexec.Exit(0))
+
+	output := struct {
+		Tables []struct {
+			Rows []boshInstance `json:"Rows"`
+		} `json:"Tables"`
+	}{}
+
+	err = json.Unmarshal(session.Out.Contents(), &output)
+	Expect(err).NotTo(HaveOccurred())
+
+	return output.Tables[0].Rows
+}
+
 func deleteDeployment(boshDeployment string) {
 	By(fmt.Sprintf("Deleting pcap deployment (deployment name: %s)", boshDeployment))
 	cmd := config.boshCmd(boshDeployment, "delete-deployment")
@@ -59,6 +98,17 @@ func deleteDeployment(boshDeployment string) {
 	Expect(err).NotTo(HaveOccurred())
 	const timeout = 10
 	Eventually(session, timeout*time.Minute, time.Second).Should(gexec.Exit(0))
+}
+
+func listDeployments() {
+	By(fmt.Sprintf("Listing deployments"))
+	cmd := config.boshCmd("", "deployments")
+	dumpCmd(cmd)
+	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+	Eventually(session, time.Minute, time.Second).Should(gexec.Exit(0))
+
+	writeLog(string(session.Out.Contents()))
 }
 
 func dumpCmd(cmd *exec.Cmd) {

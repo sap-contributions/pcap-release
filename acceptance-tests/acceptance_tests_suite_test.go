@@ -21,8 +21,9 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	config, err = loadConfig()
 	Expect(err).NotTo(HaveOccurred())
 
-	// Deploy pcap-api deployment
+	listDeployments()
 
+	// Deploy pcap-api deployment
 	deployPcap(baseManifestVars{
 		deploymentName: deploymentNameForTestNode(),
 	}, map[string]interface{}{}, true)
