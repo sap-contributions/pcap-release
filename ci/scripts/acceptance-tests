@@ -59,9 +59,5 @@ echo "----- Running tests"
 
 export PATH=$PATH:$GOPATH/bin
 
-echo "ENVIRONMENT BEGIN"
-env
-echo "ENVIRONMENT END"
-
 ginkgo version
 ginkgo -v -p -r --trace --show-node-events --randomize-all --flake-attempts 5 "${ADDITIONAL_ARGS[@]}"
