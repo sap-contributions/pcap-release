@@ -24,9 +24,10 @@ type varsStoreReader func(interface{}) error
 func buildManifestVars(baseManifestVars baseManifestVars, customVars map[string]interface{}) map[string]interface{} {
 	vars := map[string]interface{}{
 		"release-version":   config.ReleaseVersion,
-		"bosh_director_ca":  config.BoshCACert,
+		"director_ssl_ca":   config.BoshDirectorCA,
 		"bosh_director_api": config.BoshDirectorIP,
-		"bosh_default_ca":   config.BoshDefaultCA,
+		"director_ssl_cert": config.BoshDirectorCert,
+		"director_ssl_key":  config.BoshDirectorKey,
 		"deployment-name":   baseManifestVars.deploymentName,
 	}
 	for k, v := range customVars {

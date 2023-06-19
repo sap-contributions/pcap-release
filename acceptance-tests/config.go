@@ -12,8 +12,9 @@ type Config struct {
 	ReleaseRepoPath  string `json:"releaseRepoPath"`
 	ReleaseVersion   string `json:"releaseVersion"`
 	BoshDirectorIP   string `json:"boshDirectorIP"`
-	BoshDefaultCA    string `json:"boshDefaultCA"`
-	BoshCACert       string `json:"boshCACert"`
+	BoshDirectorCert string `json:"boshDirectorCert"`
+	BoshDirectorKey  string `json:"boshDirectorKey"`
+	BoshDirectorCA   string `json:"boshDirectorCA"`
 	BoshClient       string `json:"boshClient"`
 	BoshClientSecret string `json:"boshClientSecret"`
 	BoshEnvironment  string `json:"boshEnvironment"`
@@ -33,12 +34,17 @@ func loadConfig() (Config, error) {
 		return Config{}, err
 	}
 
-	boshCACert, err := getEnvOrFail("BOSH_CA_CERT")
+	boshDirectorCA, err := getEnvOrFail("BOSH_DIRECTOR_CA")
 	if err != nil {
 		return Config{}, err
 	}
 
-	boshDefaultCA, err := getEnvOrFail("BOSH_DEFAULT_CA")
+	boshDirectorCert, err := getEnvOrFail("BOSH_DIRECTOR_CERT")
+	if err != nil {
+		return Config{}, err
+	}
+
+	boshDirectorKey, err := getEnvOrFail("BOSH_DIRECTOR_KEY")
 	if err != nil {
 		return Config{}, err
 	}
@@ -83,8 +89,9 @@ func loadConfig() (Config, error) {
 		ReleaseRepoPath:  releaseRepoPath,
 		ReleaseVersion:   releaseVersion,
 		BoshDirectorIP:   boshDirectorIP,
-		BoshDefaultCA:    boshDefaultCA,
-		BoshCACert:       boshCACert,
+		BoshDirectorCert: boshDirectorCert,
+		BoshDirectorKey:  boshDirectorKey,
+		BoshDirectorCA:   boshDirectorCA,
 		BoshClient:       boshClient,
 		BoshClientSecret: boshClientSecret,
 		BoshEnvironment:  boshEnvironment,
@@ -98,7 +105,8 @@ func (config *Config) boshCmd(boshDeployment string, args ...string) *exec.Cmd {
 	cmd := exec.Command(config.BoshPath, append([]string{"--tty", "--no-color"}, args...)...)
 	cmd.Env = []string{
 		fmt.Sprintf("BOSH_DIRECTOR_IP=%s", config.BoshDirectorIP),
-		fmt.Sprintf("BOSH_CA_CERT=%s", config.BoshCACert),
+		fmt.Sprintf("BOSH_DIRECTOR_CA=%s", config.BoshDirectorCA),
+		fmt.Sprintf("BOSH_DIRECTOR_CERT=%s", config.BoshDirectorCert),
 		fmt.Sprintf("BOSH_CLIENT=%s", config.BoshClient),
 		fmt.Sprintf("BOSH_CLIENT_SECRET=%s", config.BoshClientSecret),
 		fmt.Sprintf("BOSH_ENVIRONMENT=%s", config.BoshEnvironment),

@@ -205,16 +205,18 @@ function main() {
               --vars-store="${local_bosh_dir}/creds.yml" \
               --state="${local_bosh_dir}/state.json"
 
-      bosh int "${local_bosh_dir}/creds.yml" --path /director_ssl/ca > "${local_bosh_dir}/ca.crt"
-      bosh int "${local_bosh_dir}/creds.yml" --path /default_ca > "${local_bosh_dir}/default_ca.yml"
-      bosh -e "${BOSH_DIRECTOR_IP}" --ca-cert "${local_bosh_dir}/ca.crt" alias-env "${BOSH_ENVIRONMENT}"
+      bosh int "${local_bosh_dir}/creds.yml" --path /director_ssl/ca > "${local_bosh_dir}/director_ssl_ca.crt"
+      bosh int "${local_bosh_dir}/creds.yml" --path /director_ssl/certificate > "${local_bosh_dir}/director_ssl_cert.crt"
+      bosh int "${local_bosh_dir}/creds.yml" --path /director_ssl/private_key > "${local_bosh_dir}/director_ssl_key.pem"
+      bosh -e "${BOSH_DIRECTOR_IP}" --ca-cert "${local_bosh_dir}/director_ssl_ca.crt" alias-env "${BOSH_ENVIRONMENT}"
 
       cat <<EOF > "${local_bosh_dir}/env"
       export BOSH_ENVIRONMENT="${BOSH_ENVIRONMENT}"
       export BOSH_CLIENT=admin
       export BOSH_CLIENT_SECRET=`bosh int "${local_bosh_dir}/creds.yml" --path /admin_password`
-      export BOSH_CA_CERT="${local_bosh_dir}/ca.crt"
-      export BOSH_DEFAULT_CA="$(cat ${local_bosh_dir}/default_ca.yml)"
+      export BOSH_DIRECTOR_CA="${local_bosh_dir}/ca.crt"
+      export BOSH_DIRECTOR_CERT="${local_bosh_dir}/director_ssl_cert.crt"
+      export BOSH_DIRECTOR_KEY="${local_bosh_dir}/director_ssl_key.pem"
       export BOSH_DIRECTOR_IP="${BOSH_DIRECTOR_IP}"
 
 EOF

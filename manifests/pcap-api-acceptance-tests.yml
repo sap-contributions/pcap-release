@@ -29,9 +29,9 @@ instance_groups:
               mtls:
                 common_name: bosh.service.cf.internal
                 skip_verify: false
-                certificate: ((pcap_api_bosh_mtls.certificate))
-                private_key: ((pcap_api_bosh_mtls.private_key))
-                ca: ((bosh_director_ca))
+                certificate: ((director_ssl_cert))
+                private_key: ((director_ssl_key))
+                ca: ((director_ssl_ca))
             agents_mtls:
               common_name: pcap-agent.service.cf.internal
               skip_verify: false
@@ -106,12 +106,3 @@ variables:
         - server_auth
     type: certificate
     update_mode: converge
-  - name: pcap_api_bosh_mtls
-    options:
-      alternative_names:
-        - pcap-api.service.cf.internal
-      ca: bosh_default_ca
-      common_name: pcap_api_bosh_mtls
-      extended_key_usage:
-        - client_auth
-    type: certificate
