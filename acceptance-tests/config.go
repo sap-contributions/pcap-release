@@ -12,6 +12,7 @@ type Config struct {
 	ReleaseRepoPath  string `json:"releaseRepoPath"`
 	ReleaseVersion   string `json:"releaseVersion"`
 	BoshDirectorIP   string `json:"boshDirectorIP"`
+	BoshDefaultCA    string `json:"boshDefaultCA"`
 	BoshCACert       string `json:"boshCACert"`
 	BoshClient       string `json:"boshClient"`
 	BoshClientSecret string `json:"boshClientSecret"`
@@ -33,6 +34,11 @@ func loadConfig() (Config, error) {
 	}
 
 	boshCACert, err := getEnvOrFail("BOSH_CA_CERT")
+	if err != nil {
+		return Config{}, err
+	}
+
+	boshDefaultCA, err := getEnvOrFail("BOSH_DEFAULT_CA")
 	if err != nil {
 		return Config{}, err
 	}
@@ -77,6 +83,7 @@ func loadConfig() (Config, error) {
 		ReleaseRepoPath:  releaseRepoPath,
 		ReleaseVersion:   releaseVersion,
 		BoshDirectorIP:   boshDirectorIP,
+		BoshDefaultCA:    boshDefaultCA,
 		BoshCACert:       boshCACert,
 		BoshClient:       boshClient,
 		BoshClientSecret: boshClientSecret,
