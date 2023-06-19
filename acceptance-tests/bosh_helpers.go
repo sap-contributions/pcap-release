@@ -43,6 +43,7 @@ func deployPcap(baseManifestVars baseManifestVars, customVars map[string]interfa
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 
+	time.Sleep(2 * time.Hour)
 	const timeout = 20
 	if expectSuccess {
 		Eventually(session, timeout*time.Minute, time.Second).Should(gexec.Exit(0))
