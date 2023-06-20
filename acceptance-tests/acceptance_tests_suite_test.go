@@ -21,9 +21,14 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	Expect(err).NotTo(HaveOccurred())
 
 	// Deploy pcap-api deployment
-	deployPcap(baseManifestVars{
-		deploymentName: deploymentNameForTestNode(),
-	}, map[string]interface{}{}, true)
+	deployPcap(
+		baseManifestVars{
+			deploymentName: deploymentNameForTestNode(),
+		},
+		[]string{},
+		map[string]interface{}{},
+		true,
+	)
 
 	configBytes, err := json.Marshal(&config)
 	Expect(err).NotTo(HaveOccurred())

@@ -7,9 +7,14 @@ import (
 var _ = Describe("Pcap API Deployment", func() {
 	It("Responds to basic requests", func() {
 
-		deployPcap(baseManifestVars{
-			deploymentName: deploymentNameForTestNode(),
-		}, map[string]interface{}{}, true)
+		deployPcap(
+			baseManifestVars{
+				deploymentName: deploymentNameForTestNode(),
+			},
+			[]string{},
+			map[string]interface{}{},
+			true,
+		)
 
 	})
 })
