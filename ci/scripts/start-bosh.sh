@@ -218,6 +218,7 @@ function main() {
       export BOSH_DIRECTOR_CERT="${local_bosh_dir}/director_ssl_cert.crt"
       export BOSH_DIRECTOR_KEY="${local_bosh_dir}/director_ssl_key.pem"
       export BOSH_DIRECTOR_IP="${BOSH_DIRECTOR_IP}"
+      export BOSH_DIRECTOR_API="https://${BOSH_DIRECTOR_IP}:25555/"
 
 EOF
       source "${local_bosh_dir}/env"

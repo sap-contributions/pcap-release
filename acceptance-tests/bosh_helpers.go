@@ -45,7 +45,7 @@ func buildManifestVars(baseManifestVars baseManifestVars, customVars map[string]
 	vars := map[string]interface{}{
 		"release-version":   config.ReleaseVersion,
 		"director_ssl_ca":   config.BoshDirectorCA,
-		"bosh_director_api": config.BoshDirectorIP,
+		"bosh_director_api": config.BoshDirectorAPI,
 		"director_ssl_cert": config.BoshDirectorCert,
 		"director_ssl_key":  config.BoshDirectorKey,
 		"deployment-name":   baseManifestVars.deploymentName,

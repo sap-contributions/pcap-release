@@ -11,7 +11,7 @@ var config Config
 type Config struct {
 	ReleaseRepoPath  string `json:"releaseRepoPath"`
 	ReleaseVersion   string `json:"releaseVersion"`
-	BoshDirectorIP   string `json:"boshDirectorIP"`
+	BoshDirectorAPI  string `json:"boshDirectorAPI"`
 	BoshDirectorCert string `json:"boshDirectorCert"`
 	BoshDirectorKey  string `json:"boshDirectorKey"`
 	BoshDirectorCA   string `json:"boshDirectorCA"`
@@ -59,7 +59,7 @@ func loadConfig() (Config, error) {
 		return Config{}, err
 	}
 
-	boshDirectorIP, err := getEnvOrFail("BOSH_DIRECTOR_IP")
+	boshDirectorAPI, err := getEnvOrFail("BOSH_DIRECTOR_API")
 	if err != nil {
 		return Config{}, err
 	}
@@ -88,7 +88,7 @@ func loadConfig() (Config, error) {
 	return Config{
 		ReleaseRepoPath:  releaseRepoPath,
 		ReleaseVersion:   releaseVersion,
-		BoshDirectorIP:   boshDirectorIP,
+		BoshDirectorAPI:  boshDirectorAPI,
 		BoshDirectorCert: boshDirectorCert,
 		BoshDirectorKey:  boshDirectorKey,
 		BoshDirectorCA:   boshDirectorCA,
@@ -104,7 +104,7 @@ func loadConfig() (Config, error) {
 func (config *Config) boshCmd(boshDeployment string, args ...string) *exec.Cmd {
 	cmd := exec.Command(config.BoshPath, append([]string{"--tty", "--no-color"}, args...)...)
 	cmd.Env = []string{
-		fmt.Sprintf("BOSH_DIRECTOR_IP=%s", config.BoshDirectorIP),
+		fmt.Sprintf("BOSH_DIRECTOR_IP=%s", config.BoshDirectorAPI),
 		fmt.Sprintf("BOSH_DIRECTOR_CA=%s", config.BoshDirectorCA),
 		fmt.Sprintf("BOSH_DIRECTOR_CERT=%s", config.BoshDirectorCert),
 		fmt.Sprintf("BOSH_CLIENT=%s", config.BoshClient),
