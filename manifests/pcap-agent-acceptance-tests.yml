@@ -1,0 +1,55 @@
+name: pcap-target
+instance_groups:
+  - name: pcap-agent
+    azs:
+      - z1
+    instances: 1
+    vm_type: default
+    stemcell: default
+    networks: [{name: default}]
+    jobs:
+      - name: pcap-agent
+        release: pcap
+        properties:
+          pcap-agent:
+            id: pcap-agent/123
+            log_level: info
+            buffer:
+              size: 100
+              upper_limit: 95
+              lower_limit: 90
+            listen:
+              port: 9494
+              tls:
+                certificate: ((pcap_agent_mtls.certificate))
+                private_key: ((pcap_agent_mtls.private_key))
+                ca: ((pcap_agent_mtls.ca))
+
+
+update:
+  canaries: 1
+  max_in_flight: 1
+  canary_watch_time: 1000-30000
+  update_watch_time: 1000-30000
+  serial: false
+stemcells:
+  - alias: default
+    os: ubuntu-jammy
+    version: latest
+releases:
+  - name: pcap
+    version: "1.0.0"
+    url: "https://github.com/cloudfoundry/pcap-release/releases/download/v1.0.0/pcap-v1.0.0.tgz"
+    sha1: "3765c8d7e850d52ba1d6806734369ea0b07d1762"
+variables:
+  - name: pcap_agent_mtls
+    options:
+      alternative_names:
+        - pcap-agent.service.cf.internal
+      ca: /docker/pcap-api/pcap_ca
+      common_name: pcap_agent_mtls
+      extended_key_usage:
+        - client_auth
+        - server_auth
+    type: certificate
+    update_mode: converge
