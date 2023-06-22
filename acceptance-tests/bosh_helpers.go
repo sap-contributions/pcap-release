@@ -288,5 +288,5 @@ func writeLog(s string) {
 }
 
 func downloadFile(info pcapAPIInfo, remotePath, localPath string, permissions os.FileMode) error {
-	return copyFileFromRemote(info.SSHUser, info.PublicIP, info.SSHPrivateKey, "/var/vcap/packages/pcap-api/bin/cli/build/pcap-bosh-cli-linux-amd64", "/usr/local/bin/pcap-bosh-cli", 0755)
+	return copyFileFromRemote(info.SSHUser, info.PublicIP, info.SSHPrivateKey, remotePath, localPath, permissions)
 }

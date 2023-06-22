@@ -1,10 +1,11 @@
 package acceptance_tests
 
 import (
+	"fmt"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"math/rand"
 	"os/exec"
-	"time"
 )
 
 var _ = Describe("Pcap Deployment", func() {
@@ -19,17 +20,19 @@ var _ = Describe("Pcap Deployment", func() {
 			true,
 		)
 
-		err := downloadFile(info, "/var/vcap/packages/pcap-api/bin/cli/build/pcap-bosh-cli-linux-amd64", "/usr/local/bin/pcap-bosh-cli", 0755)
+		rnd := rand.New(rand.NewSource(GinkgoRandomSeed()))
+
+		boshCli := fmt.Sprintf("/usr/local/bin/pcap-bosh-cli-%d", rnd.Uint64())
+
+		By("Downloading remote pcap-bosh-cli-linux-amd64 to " + boshCli)
+		err := downloadFile(info, "/var/vcap/packages/pcap-api/bin/cli/build/pcap-bosh-cli-linux-amd64", boshCli, 0755)
 		Expect(err).NotTo(HaveOccurred())
 
-		time.Sleep(2 * time.Hour)
-
-		cmd := exec.Command("which", "pcap-bosh-cli")
+		cmd := exec.Command(boshCli, "--help")
 
 		helpTest, err := cmd.Output()
 		Expect(err).NotTo(HaveOccurred())
 
-		GinkgoLogr.Info(string(helpTest))
-
+		writeLog(string(helpTest))
 	})
 })
