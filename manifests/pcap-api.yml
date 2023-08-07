@@ -91,22 +91,6 @@ instance_groups:
               enabled: true
               client_cert: ((nats.client_cert))
               client_key: ((nats.client_key))
-      - name: pcap-agent
-        release: pcap
-        properties:
-          pcap-agent:
-            id: pcap-agent/123
-            log_level: info
-            buffer:
-              size: 100
-              upper_limit: 95
-              lower_limit: 90
-            listen:
-              port: 9494
-              tls:
-                certificate: ((pcap_agent_mtls.certificate))
-                private_key: ((pcap_agent_mtls.private_key))
-                client_cas: ((pcap_agent_mtls.ca))
 
 update:
   canaries: 1
