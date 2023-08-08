@@ -4,16 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"sync"
-	"sync/atomic"
-
+	"github.com/netdata/go.d.plugin/pkg/iprange"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+	"io"
+	"net"
+	"strings"
+	"sync"
+	"sync/atomic"
 )
 
 type API struct {
@@ -172,9 +176,28 @@ func (api *API) Capture(stream API_CaptureServer) (err error) {
 	}
 
 	ctx, cancel := context.WithCancelCause(stream.Context())
+
 	defer func() {
 		cancel(nil)
 	}()
+
+	// check if the client is in the allowlist before starting the Capture
+	allowList := ""
+	clientIp, err := getClientIP(ctx)
+	if err != nil {
+		// TODO check if return code is correct
+		return errorf(codes.Internal, err.Error())
+	}
+	isClientAllowed, err := isClientAllowed(clientIp, allowList)
+	if err != nil {
+		// TODO check if return code is correct
+		return errorf(codes.Internal, "failed to check if client is allowlisted: %w", err.Error())
+	}
+	if !isClientAllowed {
+		// TODO check if return code is correct
+		return errorf(codes.PermissionDenied, "Client IP is not in the allowlist")
+
+	}
 
 	ctx, log = setVcapID(ctx, log, nil)
 
@@ -531,4 +554,33 @@ func convertAgentStatusCodeToMsg(err error, targetIdentifier string) *CaptureRes
 	default:
 		return newMessageResponse(MessageType_UNKNOWN, err.Error(), targetIdentifier)
 	}
+}
+func isClientAllowed(ip string, allowlist string) (bool, error) {
+	clientIp, _, err := net.ParseCIDR(ip)
+	cidrs, err := iprange.ParseRanges(allowlist)
+	for _, cidr := range cidrs {
+		if cidr.Contains(clientIp) {
+			return true, nil
+		}
+	}
+
+	return false, err
+}
+
+func getClientIP(ctx context.Context) (string, error) {
+	clientIp := ""
+	if p, ok := peer.FromContext(ctx); ok {
+		clientIp := p.Addr.String()
+		return clientIp, nil
+	} else if headers, ok := metadata.FromIncomingContext(ctx); ok {
+		xForwardFor := headers.Get("x-forwarded-for")
+		if len(xForwardFor) > 0 && xForwardFor[0] != "" {
+			ips := strings.Split(xForwardFor[0], ",")
+			if len(ips) > 0 {
+				clientIp := ips[0]
+				return clientIp, nil
+			}
+		}
+	}
+	return clientIp, fmt.Errorf("failed to get client IP from Context")
 }

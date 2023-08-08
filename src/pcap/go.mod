@@ -10,6 +10,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gopacket/gopacket v1.1.1
 	github.com/jessevdk/go-flags v1.5.0
+	github.com/netdata/go.d.plugin v0.54.1
 	github.com/onsi/ginkgo/v2 v2.11.0
 	github.com/onsi/gomega v1.27.10
 	go.uber.org/zap v1.25.0
@@ -19,7 +20,7 @@ require (
 )
 
 require (
-	github.com/fsnotify/fsnotify v1.5.4 // indirect
+	github.com/apparentlymart/go-cidr v1.1.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
@@ -30,6 +31,7 @@ require (
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
+	go.uber.org/atomic v1.9.0 // indirect
 	golang.org/x/crypto v0.11.0 // indirect
 	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/sys v0.10.0 // indirect
