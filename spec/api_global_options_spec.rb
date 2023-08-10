@@ -57,6 +57,20 @@ describe 'config/pcap-api.yml global properties' do
     end
   end
 
+  context 'when pcap-api.enable_ip_restriction is provided' do
+    let(:enable_ip_restriction) do
+      {
+        'enable_ip_restriction' => true
+      }
+    end
+
+    it 'configures value correctly' do
+      properties.merge!(enable_ip_restriction)
+      expect(pcap_api_conf['enable_ip_restriction']).to eq(true)
+      !expect(pcap_api_conf['cidr_allowlist']).to eq("")
+    end
+  end
+
   context 'when pcap-api.listen port is not provided' do
     it 'configures values correctly' do
       expect(pcap_api_conf['listen']['port']).to eq(8080)

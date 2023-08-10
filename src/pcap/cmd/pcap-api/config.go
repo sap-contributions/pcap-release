@@ -6,9 +6,6 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/pcap-release/src/pcap"
-
-	"github.com/go-playground/validator/v10"
-	"gopkg.in/yaml.v3"
 )
 
 var DefaultAPIConfig = APIConfig{
@@ -28,10 +25,12 @@ var DefaultAPIConfig = APIConfig{
 }
 
 type APIConfig struct {
-	pcap.NodeConfig    `yaml:"-,inline"`
-	AgentsMTLS         *pcap.ClientTLS `yaml:"agents_mtls" validate:"omitempty"`
-	ConcurrentCaptures int32           `yaml:"concurrent_captures"`
-	DrainTimeout       time.Duration   `yaml:"drain_timeout"`
+	pcap.NodeConfig     `yaml:"-,inline"`
+	AgentsMTLS          *pcap.ClientTLS `yaml:"agents_mtls" validate:"omitempty"`
+	ConcurrentCaptures  int32           `yaml:"concurrent_captures"`
+	DrainTimeout        time.Duration   `yaml:"drain_timeout"`
+	EnableIpRestriction bool            `yaml:"enable_ip_restriction"`
+	CidrAllowlist       []string        `yaml:"cidr_allowlist"`
 
 	BoshResolverConfig *pcap.BoshResolverConfig `yaml:"bosh,omitempty" validate:"dive"`
 	// TODO: Add CF specific config fragments
