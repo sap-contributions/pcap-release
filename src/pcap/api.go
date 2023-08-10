@@ -4,6 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net"
+	"strings"
+	"sync"
+	"sync/atomic"
+
 	"github.com/netdata/go.d.plugin/pkg/iprange"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -13,11 +19,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
-	"io"
-	"net"
-	"strings"
-	"sync"
-	"sync/atomic"
 )
 
 type API struct {
