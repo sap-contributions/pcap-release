@@ -18,6 +18,8 @@ instance_groups:
               upper_limit: 995
               lower_limit: 900
             concurrent_captures: 5
+            client_ip_restriction:
+              enabled: false
             listen:
               port: 8080
               tls:

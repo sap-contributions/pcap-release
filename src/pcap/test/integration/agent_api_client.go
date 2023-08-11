@@ -28,9 +28,11 @@ var port = 9494
 
 var APIPort = 8080
 
+var allowlist []string
+
 func createAPIwithLocalResolver(targets []pcap.AgentEndpoint, bufConf pcap.BufferConf, mTLSConfig *pcap.ClientTLS, id string) (pcap.APIClient, *grpc.Server, *pcap.API, net.Addr) {
 	resolver := NewLocalResolver(targets)
-	return createAPI(resolver, bufConf, mTLSConfig, id)
+	return createAPI(resolver, bufConf, mTLSConfig, id, allowlist)
 }
 
 var _ = Describe("Using LocalResolver", func() {

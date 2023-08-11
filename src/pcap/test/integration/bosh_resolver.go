@@ -323,7 +323,7 @@ var _ = Describe("Client to API with Bosh Resolver", func() {
 })
 
 func createAPIwithBoshResolver(resolver *pcap.BoshResolver, bufConf pcap.BufferConf, mTLSConfig *pcap.ClientTLS, id string) (pcap.APIClient, *grpc.Server, *pcap.API, net.Addr) {
-	return createAPI(resolver, bufConf, mTLSConfig, id)
+	return createAPI(resolver, bufConf, mTLSConfig, id, allowlist)
 }
 
 func sendDeferredStop(client *pcap.Client, duration time.Duration) {

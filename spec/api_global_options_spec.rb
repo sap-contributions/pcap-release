@@ -57,17 +57,34 @@ describe 'config/pcap-api.yml global properties' do
     end
   end
 
-  context 'when pcap-api.enable_ip_restriction is provided' do
-    let(:enable_ip_restriction) do
+  context 'when client_ip_restriction is enabled' do
+    let(:client_ip_restriction) do
       {
-        'enable_ip_restriction' => true
-      }
+        'client_ip_restriction' => {
+          'enabled' => 'true',
+          'cidr_allowlist' => %w[5.22.1.3 5.22.12.3]
+      }}
     end
 
-    it 'configures value correctly' do
-      properties.merge!(enable_ip_restriction)
-      expect(pcap_api_conf['enable_ip_restriction']).to eq(true)
-      !expect(pcap_api_conf['cidr_allowlist']).to eq("")
+    it 'configures cidr allowlist correctly' do
+      properties.merge!(client_ip_restriction)
+      expect(pcap_api_conf['enabled']).to eq(true)
+      expect(pcap_api_conf['cidr_allowlist']).to eq(%w[5.22.1.3 5.22.12.3])
+    end
+  end
+
+  context 'when client_ip_restriction is disabled' do
+    let(:client_ip_restriction) do
+      {
+        'client_ip_restriction' => {
+          'enabled' => 'false',
+        }}
+    end
+
+    it 'configures cidr allowlist correctly' do
+      properties.merge!(client_ip_restriction)
+      expect(pcap_api_conf['enabled']).to eq(false)
+      expect(pcap_api_conf['client_ip_restriction']).not_to have_key('cidr_allowlist')
     end
   end
 

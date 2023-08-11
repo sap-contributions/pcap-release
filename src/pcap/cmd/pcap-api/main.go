@@ -55,7 +55,7 @@ func main() {
 
 	pcap.SetLogLevel(log, config.LogLevel)
 
-	api, err := pcap.NewAPI(config.Buffer, config.AgentsMTLS, config.ID, config.ConcurrentCaptures)
+	api, err := pcap.NewAPI(config.Buffer, config.AgentsMTLS, config.ID, config.ConcurrentCaptures, config.CidrAllowlist)
 	if err != nil {
 		log.Error("Unable to create api", zap.Error(err))
 		return

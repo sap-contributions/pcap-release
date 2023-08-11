@@ -76,21 +76,24 @@ func prepareMockBoshDirectorResponse() map[string]string {
 
 func updateAPIConfig(file string, boshURL string) {
 	config := fmt.Sprintf(`log_level: debug
-id: "test-pcap-api"
-buffer:
-  size: 1000
-  upperLimit: 995
-  lowerLimit: 900
-concurrent_captures: 5
-listen:
-  port: 8081
-cli_download_root: "/var/vcap/packages/pcap-api/bin/cli/build/"
-bosh:
-  agent_port: 9494
-  director_url: %v
-  token_scope: "bosh.admin"
-  tls:
-    enabled: false
+agent:
+  buffer:
+    size: 100
+    upperLimit: 95
+    lowerLimit: 90
+  id: "testapi"
+  listen:
+    port: 8080
+  agents:
+    listen: 8080
+  bosh_environment:
+    director_url: "%v"
+    agent_port: 8083
+    token_scope: "bosh.admin"
+  drain_timeout: 10s
+  concurrent_captures: 5
+  client_ip_restriction:
+	enabled: false
 `, boshURL)
 	log := zap.L().With(zap.String("file", file))
 

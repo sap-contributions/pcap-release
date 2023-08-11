@@ -36,11 +36,12 @@ type API struct {
 	maxConcurrentCaptures int32
 	concurrentStreams     atomic.Int32
 	tlsCredentials        credentials.TransportCredentials
+	cidrAllowlist         []string
 
 	UnimplementedAPIServer
 }
 
-func NewAPI(bufConf BufferConf, clientTLS *ClientTLS, id string, maxConcurrentCaptures int32) (*API, error) {
+func NewAPI(bufConf BufferConf, clientTLS *ClientTLS, id string, maxConcurrentCaptures int32, cidrAllowlist []string) (*API, error) {
 	clientTLSCreds := insecure.NewCredentials()
 	if clientTLS != nil {
 		clientTLSConf, err := clientTLS.Config()
@@ -57,6 +58,7 @@ func NewAPI(bufConf BufferConf, clientTLS *ClientTLS, id string, maxConcurrentCa
 		id:                    id,
 		maxConcurrentCaptures: maxConcurrentCaptures,
 		tlsCredentials:        clientTLSCreds,
+		cidrAllowlist:         cidrAllowlist,
 	}, nil
 }
 
@@ -183,23 +185,24 @@ func (api *API) Capture(stream API_CaptureServer) (err error) {
 	}()
 
 	// check if the client is in the allowlist before starting the Capture
-	allowList := ""
-	clientIp, err := getClientIP(ctx)
-	if err != nil {
-		// TODO check if return code is correct
-		return errorf(codes.Internal, err.Error())
-	}
-	isClientAllowed, err := isClientAllowed(clientIp, allowList)
-	if err != nil {
-		// TODO check if return code is correct
-		return errorf(codes.Internal, "failed to check if client is allowlisted: %w", err.Error())
-	}
-	if !isClientAllowed {
-		// TODO check if return code is correct
-		return errorf(codes.PermissionDenied, "Client IP is not in the allowlist")
+	if len(api.cidrAllowlist) > 0 {
+		allowList := fmt.Sprint(api.cidrAllowlist)
+		clientIp, err := getClientIP(ctx)
+		if err != nil {
+			// TODO check if return code is correct
+			return errorf(codes.Internal, err.Error())
+		}
+		isClientAllowed, err := isClientAllowed(clientIp, allowList)
+		if err != nil {
+			// TODO check if return code is correct
+			return errorf(codes.Internal, "failed to check if client is allowlisted: %w ", err)
+		}
+		if !isClientAllowed {
+			// TODO check if return code is correct
+			return errorf(codes.PermissionDenied, "Client IP is not in the allowlist")
 
+		}
 	}
-
 	ctx, log = setVcapID(ctx, log, nil)
 
 	currentStreams := api.concurrentStreams.Add(1)

@@ -11,8 +11,19 @@ config = {
   "listen" => {
     "port" => p("pcap-api.listen.port"),
   },
-  "cli_download_root" => p("pcap-api.cli_download_root")
+  "cli_download_root" => p("pcap-api.cli_download_root"),
 }
+
+if p("pcap-api.client_ip_restriction").to_s == "true"
+    config["client_ip_restriction"]= {
+    "enabled" => true,
+    "client_cidrs_allowlist" => p("pcap-api.client_cidrs_allowlist"),
+    }
+else
+  config["client_ip_restriction"]= {
+    "enabled" => false,
+    }
+end
 
 if p("pcap-api.listen.tls.enabled").to_s == "true"
     config["listen"]["tls"] = {

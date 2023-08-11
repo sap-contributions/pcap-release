@@ -33,11 +33,8 @@ properties:
   pcap-api.concurrent_captures:
     description: "Maximum of possible concurrent captures per client"
     example: 5
-  pcap-api.enable_ip_restriction:
-    description: "If set to true, restricts accepting capture requests to the list of IPs configured in the 'cidr_allowlist' property"
-    default: false
-  pcap-api.cidr_allowlist:
-    description: "List of CIDRs from which capture responses are allowed. Format is string array of CIDRs. The list is only used if "pcap-api.enable_ip_restriction" is true"
+  pcap-api.client_cidr_allowlist:
+    description: "List of CIDRs from which capture requests are accepted. Format is string array of CIDRs. Setting this property restricts client access to the entries in the list"
     example:
       - 5.22.1.3
       - 5.22.12.3

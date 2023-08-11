@@ -275,9 +275,9 @@ func createAgent(port int, id string, tlsCreds credentials.TransportCredentials)
 	return server, target, agent
 }
 
-func createAPI(resolver pcap.AgentResolver, bufConf pcap.BufferConf, mTLSConfig *pcap.ClientTLS, id string) (pcap.APIClient, *grpc.Server, *pcap.API, net.Addr) {
+func createAPI(resolver pcap.AgentResolver, bufConf pcap.BufferConf, mTLSConfig *pcap.ClientTLS, id string, allowlist []string) (pcap.APIClient, *grpc.Server, *pcap.API, net.Addr) {
 	var server *grpc.Server
-	api, err := pcap.NewAPI(bufConf, mTLSConfig, id, MaxConcurrentCaptures)
+	api, err := pcap.NewAPI(bufConf, mTLSConfig, id, MaxConcurrentCaptures, allowlist)
 	Expect(err).NotTo(HaveOccurred())
 
 	api.RegisterResolver(resolver)
