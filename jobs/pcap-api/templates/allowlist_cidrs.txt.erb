@@ -1,0 +1,37 @@
+# generated from allowlist_cidrs.txt.erb
+<%
+require "base64"
+require 'zlib'
+require 'stringio'
+
+if p("pcap-api.enable_ip_restriction").to_s == "true"
+  if p("pcap-api.cidr_allowlist", nil)
+    raise "Conflicting configuration: pcap-api.enable_ip_restriction is true, please provide a cidr allowlist"
+  end
+
+  if p("pcap-api.cidr_allowlist").empty?
+    raise "Conflicting configuration: pcap-api.enable_ip_restriction is true, please provide a non-empty cidr allowlist"
+  end
+end
+
+if_p("pcap-api.cidr_allowlist") do |cidrs|
+  if p("pcap-api.enable_ip_restriction").to_s == "false"
+    raise "Conflicting configuration: cidr allowlist is set, but pcap-api.enable_ip_restriction is false"
+  end
+
+  uncompressed = ''
+  if cidrs.is_a?(Array)
+    uncompressed << "\# detected cidrs provided as array in cleartext format\n"
+    cidrs.each do |cidr|
+      uncompressed << cidr << "\n"
+    end
+  else
+    gzplain = Base64.decode64(cidrs)
+    gz = Zlib::GzipReader.new(StringIO.new(gzplain))
+    uncompressed = gz.read
+  end
+%>
+<%= uncompressed %>
+<%
+end
+%>

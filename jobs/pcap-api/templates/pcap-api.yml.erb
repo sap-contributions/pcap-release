@@ -14,15 +14,8 @@ config = {
   "cli_download_root" => p("pcap-api.cli_download_root"),
 }
 
-if p("pcap-api.client_ip_restriction").to_s == "true"
-    config["client_ip_restriction"]= {
-    "enabled" => true,
-    "client_cidrs_allowlist" => p("pcap-api.client_cidrs_allowlist"),
-    }
-else
-  config["client_ip_restriction"]= {
-    "enabled" => false,
-    }
+if_p("pcap-api.cidr_allowlist") do
+    config["cidr_allowlist"] = "/var/vcap/jobs/pcap-api/config/allowlist_cidrs.txt"
 end
 
 if p("pcap-api.listen.tls.enabled").to_s == "true"

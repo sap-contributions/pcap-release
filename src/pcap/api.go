@@ -1,11 +1,13 @@
 package pcap
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -36,12 +38,12 @@ type API struct {
 	maxConcurrentCaptures int32
 	concurrentStreams     atomic.Int32
 	tlsCredentials        credentials.TransportCredentials
-	cidrAllowlist         []string
+	allowListCidrs        []iprange.Range
 
 	UnimplementedAPIServer
 }
 
-func NewAPI(bufConf BufferConf, clientTLS *ClientTLS, id string, maxConcurrentCaptures int32, cidrAllowlist []string) (*API, error) {
+func NewAPI(bufConf BufferConf, clientTLS *ClientTLS, id string, maxConcurrentCaptures int32, cidrAllowlistPath string) (*API, error) {
 	clientTLSCreds := insecure.NewCredentials()
 	if clientTLS != nil {
 		clientTLSConf, err := clientTLS.Config()
@@ -49,6 +51,16 @@ func NewAPI(bufConf BufferConf, clientTLS *ClientTLS, id string, maxConcurrentCa
 			return nil, fmt.Errorf("create api failed: %w", err)
 		}
 		clientTLSCreds = credentials.NewTLS(clientTLSConf)
+	}
+	allowListCidrs := []iprange.Range{}
+	if cidrAllowlistPath != "" {
+		allowList, err := extractAllowListCidrs(cidrAllowlistPath)
+		if err != nil {
+			return nil, fmt.Errorf("create api failed: %w", err)
+		}
+		allowListCidrs = allowList
+	} else {
+		allowListCidrs = nil
 	}
 
 	return &API{
@@ -58,8 +70,36 @@ func NewAPI(bufConf BufferConf, clientTLS *ClientTLS, id string, maxConcurrentCa
 		id:                    id,
 		maxConcurrentCaptures: maxConcurrentCaptures,
 		tlsCredentials:        clientTLSCreds,
-		cidrAllowlist:         cidrAllowlist,
+		allowListCidrs:        allowListCidrs,
 	}, nil
+}
+
+func extractAllowListCidrs(cidrAllowlistPath string) ([]iprange.Range, error) {
+	allowListFile, err := os.Open(cidrAllowlistPath)
+	if err != nil {
+		return nil, err
+	}
+
+	allowListCidrs := []iprange.Range{}
+
+	r := bufio.NewReader(allowListFile)
+	for {
+		line, err := r.ReadString('\n')
+
+		if err == io.EOF {
+			break
+		}
+		if strings.Contains(line, "#") {
+			continue
+		}
+		cidrs, err := iprange.ParseRanges(line)
+		if err != nil {
+			zap.L().Warn("cannot parse provided CIDR, skipping the line and continue")
+			continue
+		}
+		allowListCidrs = append(allowListCidrs, cidrs...)
+	}
+	return allowListCidrs, nil
 }
 
 // AgentEndpoint defines the endpoint for a pcap-agent.
@@ -185,22 +225,16 @@ func (api *API) Capture(stream API_CaptureServer) (err error) {
 	}()
 
 	// check if the client is in the allowlist before starting the Capture
-	if len(api.cidrAllowlist) > 0 {
-		allowList := fmt.Sprint(api.cidrAllowlist)
-		clientIp, err := getClientIP(ctx)
+	if api.allowListCidrs != nil {
+		isClientAllowed, err := isClientAllowed(ctx, api.allowListCidrs)
 		if err != nil {
 			// TODO check if return code is correct
-			return errorf(codes.Internal, err.Error())
+			return errorf(codes.Internal, "failed to check if client is allowlisted: %w", err)
 		}
-		isClientAllowed, err := isClientAllowed(clientIp, allowList)
-		if err != nil {
-			// TODO check if return code is correct
-			return errorf(codes.Internal, "failed to check if client is allowlisted: %w ", err)
-		}
+
 		if !isClientAllowed {
 			// TODO check if return code is correct
-			return errorf(codes.PermissionDenied, "Client IP is not in the allowlist")
-
+			return errorf(codes.PermissionDenied, "client IP is not in the allowlist")
 		}
 	}
 	ctx, log = setVcapID(ctx, log, nil)
@@ -559,32 +593,38 @@ func convertAgentStatusCodeToMsg(err error, targetIdentifier string) *CaptureRes
 		return newMessageResponse(MessageType_UNKNOWN, err.Error(), targetIdentifier)
 	}
 }
-func isClientAllowed(ip string, allowlist string) (bool, error) {
-	clientIp, _, err := net.ParseCIDR(ip)
-	cidrs, err := iprange.ParseRanges(allowlist)
-	for _, cidr := range cidrs {
-		if cidr.Contains(clientIp) {
+
+func isClientAllowed(ctx context.Context, allowListCidrs []iprange.Range) (bool, error) {
+	ip, err := getClientIP(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	clientIP := net.ParseIP(ip)
+
+	for _, cidr := range allowListCidrs {
+		if cidr.Contains(clientIP) {
 			return true, nil
 		}
 	}
 
-	return false, err
+	return false, nil
 }
 
 func getClientIP(ctx context.Context) (string, error) {
-	clientIp := ""
-	if p, ok := peer.FromContext(ctx); ok {
-		clientIp := p.Addr.String()
-		return clientIp, nil
-	} else if headers, ok := metadata.FromIncomingContext(ctx); ok {
+	if headers, ok := metadata.FromIncomingContext(ctx); ok {
 		xForwardFor := headers.Get("x-forwarded-for")
 		if len(xForwardFor) > 0 && xForwardFor[0] != "" {
 			ips := strings.Split(xForwardFor[0], ",")
-			if len(ips) > 0 {
-				clientIp := ips[0]
-				return clientIp, nil
+			hopsNumber := len(ips)
+			if hopsNumber >= 2 && ips[hopsNumber-2] != "" {
+				return strings.TrimSpace(ips[hopsNumber-2]), nil
 			}
 		}
 	}
-	return clientIp, fmt.Errorf("failed to get client IP from Context")
+
+	if p, ok := peer.FromContext(ctx); ok {
+		return p.Addr.String(), nil
+	}
+	return "", fmt.Errorf("failed to get client IP from Context")
 }

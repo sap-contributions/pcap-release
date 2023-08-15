@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/netdata/go.d.plugin/pkg/iprange"
+	"google.golang.org/grpc/metadata"
 	"io"
 	"sync"
 	"testing"
@@ -302,7 +304,7 @@ func TestCapture(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			log := zap.L()
-			api, err := NewAPI(BufferConf{Size: 5, UpperLimit: 4, LowerLimit: 3}, nil, origin, 1, allowlist)
+			api, err := NewAPI(BufferConf{Size: 5, UpperLimit: 4, LowerLimit: 3}, nil, origin, 1, "")
 			if err != nil {
 				t.Errorf("capture() unexpected error during api creation: %v", err)
 			}
@@ -370,7 +372,7 @@ func TestAPIStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			api, err := NewAPI(BufferConf{Size: 5, UpperLimit: 4, LowerLimit: 3}, nil, origin, 1, allowlist)
+			api, err := NewAPI(BufferConf{Size: 5, UpperLimit: 4, LowerLimit: 3}, nil, origin, 1, "")
 			api.RegisterResolver(HealthyResolver{})
 			if err != nil {
 				t.Errorf("Status() unexpected error during api creation: %v", err)
@@ -422,7 +424,7 @@ func TestAPICapture(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			api, err := NewAPI(BufferConf{Size: 5, UpperLimit: 4, LowerLimit: 3}, nil, origin, 1, allowlist)
+			api, err := NewAPI(BufferConf{Size: 5, UpperLimit: 4, LowerLimit: 3}, nil, origin, 1, "")
 			if err != nil {
 				t.Errorf("Capture() unexpected error during api creation: %v", err)
 			}
@@ -498,6 +500,52 @@ func TestConvertStatusCodeToMsg(t *testing.T) {
 				t.Errorf("convertAgentStatusCodeToMsg() = %v, want %v", got.GetMessage().GetType(), tt.wantMsgType)
 
 				t.Logf("message: %v", got.GetMessage().Message)
+			}
+		})
+	}
+}
+
+func Test_isClientAllowed(t *testing.T) {
+	tests := []struct {
+		name    string
+		md      metadata.MD
+		want    bool
+		wantErr bool
+	}{
+		{
+			name:    "Allowlist contains the IP from x-forwarded-for header (valid hop position)",
+			md:      metadata.MD{XForwardedFor: []string{"10.10.0.10, 11.11.11.11"}},
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name:    "x-forwarded-for header too short",
+			md:      metadata.MD{XForwardedFor: []string{"10.10.0.10"}},
+			want:    false,
+			wantErr: true,
+		},
+		{
+			name:    "Allowlist contains the IP from x-forwarded-for header but on invalid hop position",
+			md:      metadata.MD{XForwardedFor: []string{"10.10.0.10, 11.11.11.11, 12.12.12.12, 13.13.13.13"}},
+			want:    false,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := metadata.NewIncomingContext(context.Background(), tt.md)
+			cidr, err := iprange.ParseRanges("10.10.0.10/32")
+			if err != nil {
+				t.Errorf("Unexpected error occured: %v", err)
+			}
+
+			got, err := isClientAllowed(ctx, cidr)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("isClientAllowed() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("isClientAllowed() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

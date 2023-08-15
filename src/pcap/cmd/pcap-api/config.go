@@ -27,13 +27,11 @@ var DefaultAPIConfig = APIConfig{
 }
 
 type APIConfig struct {
-	pcap.NodeConfig     `yaml:"-,inline"`
-	AgentsMTLS          *pcap.ClientTLS `yaml:"agents_mtls" validate:"omitempty"`
-	ConcurrentCaptures  int32           `yaml:"concurrent_captures"`
-	DrainTimeout        time.Duration   `yaml:"drain_timeout"`
-	time.Duration       `yaml:"drain_timeout"`
-	EnableIpRestriction bool     `yaml:"enable_ip_restriction"`
-	CidrAllowlist       []string `yaml:"cidr_allowlist"`
+	pcap.NodeConfig    `yaml:"-,inline"`
+	AgentsMTLS         *pcap.ClientTLS `yaml:"agents_mtls" validate:"omitempty"`
+	ConcurrentCaptures int32           `yaml:"concurrent_captures"`
+	DrainTimeout       time.Duration   `yaml:"drain_timeout"`
+	CidrAllowlist      string          `yaml:"cidr_allowlist,omitempty"`
 
 	BoshResolverConfig *pcap.BoshResolverConfig `yaml:"bosh,omitempty" validate:"dive"`
 	// TODO: Add CF specific config fragments
