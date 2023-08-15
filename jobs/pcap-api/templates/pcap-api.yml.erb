@@ -14,6 +14,10 @@ config = {
   "cli_download_root" => p("pcap-api.cli_download_root")
 }
 
+if_p("pcap-api.cidr_allowlist") do
+    config["cidr_allowlist"] = "/var/vcap/jobs/pcap-api/config/allowlist_cidrs.txt"
+end
+
 if p("pcap-api.listen.tls.enabled").to_s == "true"
     config["listen"]["tls"] = {
         "certificate"=> "/var/vcap/jobs/pcap-api/config/certs/pcap-api.crt",

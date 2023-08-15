@@ -13,6 +13,7 @@ templates:
   agents_mtls/pcap-api-client.crt.erb: config/certs/pcap-api-client.crt
   agents_mtls/pcap-api-client.key.erb: config/certs/pcap-api-client.key
   agents_mtls/pcap-api-client.ca.erb: config/certs/pcap-api-client-ca.crt
+  allowlist_cidrs.txt.erb: config/allowlist_cidrs.txt
 
 packages:
 - pcap-api
@@ -30,17 +31,15 @@ properties:
   pcap-api.buffer.lower_limit:
     description: "Limit under which the buffer manager stops to discard responses"
     example: 900
+  pcap-api.cidr_allowlist:
+    description: "List of CIDRs from which capture responses are allowed. Format is string array of CIDRs"
+    default: ~
+    example:
+    - 5.22.1.3/24
+    - 5.22.12.3/32
   pcap-api.concurrent_captures:
     description: "Maximum of possible concurrent captures per client"
     example: 5
-  pcap-api.enable_ip_restriction:
-    description: "If set to true, restricts accepting capture requests to the list of IPs configured in the 'cidr_allowlist' property"
-    default: false
-  pcap-api.cidr_allowlist:
-    description: "List of CIDRs from which capture responses are allowed. Format is string array of CIDRs. The list is only used if "pcap-api.enable_ip_restriction" is true"
-    example:
-      - 5.22.1.3
-      - 5.22.12.3
   pcap-api.listen.port:
     description: "The port for the pcap-api to listen on"
     default: 8080
