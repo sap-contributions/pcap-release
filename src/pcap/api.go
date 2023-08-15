@@ -4,6 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net"
+	"strings"
+	"sync"
+	"sync/atomic"
+
 	"github.com/netdata/go.d.plugin/pkg/iprange"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -13,11 +19,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
-	"io"
-	"net"
-	"strings"
-	"sync"
-	"sync/atomic"
 )
 
 type API struct {
@@ -183,20 +184,15 @@ func (api *API) Capture(stream API_CaptureServer) (err error) {
 
 	// check if the client is in the allowlist before starting the Capture
 	allowList := ""
-	clientIp, err := getClientIP(ctx)
+	isClientAllowed, err := isClientAllowed(ctx, allowList)
 	if err != nil {
 		// TODO check if return code is correct
-		return errorf(codes.Internal, err.Error())
+		return errorf(codes.Internal, "failed to check if client is allowlisted: %w", err)
 	}
-	isClientAllowed, err := isClientAllowed(clientIp, allowList)
-	if err != nil {
-		// TODO check if return code is correct
-		return errorf(codes.Internal, "failed to check if client is allowlisted: %w", err.Error())
-	}
+
 	if !isClientAllowed {
 		// TODO check if return code is correct
-		return errorf(codes.PermissionDenied, "Client IP is not in the allowlist")
-
+		return errorf(codes.PermissionDenied, "client IP is not in the allowlist")
 	}
 
 	ctx, log = setVcapID(ctx, log, nil)
@@ -555,32 +551,41 @@ func convertAgentStatusCodeToMsg(err error, targetIdentifier string) *CaptureRes
 		return newMessageResponse(MessageType_UNKNOWN, err.Error(), targetIdentifier)
 	}
 }
-func isClientAllowed(ip string, allowlist string) (bool, error) {
-	clientIp, _, err := net.ParseCIDR(ip)
+func isClientAllowed(ctx context.Context, allowlist string) (bool, error) {
+	ip, err := getClientIP(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	clientIP := net.ParseIP(ip)
 	cidrs, err := iprange.ParseRanges(allowlist)
+	if err != nil {
+		return false, err
+	}
+
 	for _, cidr := range cidrs {
-		if cidr.Contains(clientIp) {
+		if cidr.Contains(clientIP) {
 			return true, nil
 		}
 	}
 
-	return false, err
+	return false, nil
 }
 
 func getClientIP(ctx context.Context) (string, error) {
-	clientIp := ""
-	if p, ok := peer.FromContext(ctx); ok {
-		clientIp := p.Addr.String()
-		return clientIp, nil
-	} else if headers, ok := metadata.FromIncomingContext(ctx); ok {
+	if headers, ok := metadata.FromIncomingContext(ctx); ok {
 		xForwardFor := headers.Get("x-forwarded-for")
 		if len(xForwardFor) > 0 && xForwardFor[0] != "" {
 			ips := strings.Split(xForwardFor[0], ",")
-			if len(ips) > 0 {
-				clientIp := ips[0]
-				return clientIp, nil
+			hopsNumber := len(ips)
+			if hopsNumber >= 2 && ips[hopsNumber-2] != "" {
+				return ips[hopsNumber-2], nil
 			}
 		}
 	}
-	return clientIp, fmt.Errorf("failed to get client IP from Context")
+
+	if p, ok := peer.FromContext(ctx); ok {
+		return p.Addr.String(), nil
+	}
+	return "", fmt.Errorf("failed to get client IP from Context")
 }
